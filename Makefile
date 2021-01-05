@@ -7,7 +7,8 @@ SRC_DIRS ?= ./src
 INC_DIRS ?= ./include
 EXE_DIR ?= $(BUILD_DIR)/exec
 SIMT_DIR ?= ./freestanding
-DRAGON_DIR ?= /home/vsm2/bafs_dragon/
+#DRAGON_DIR ?= /home/vsm2/bafs_dragon/
+DRAGON_DIR ?= /mnt/nvme0/bafs_dragon/
 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s -or -name *.cu)
 SRCS_NAMES := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s -or -name *.cu -printf "%f\n")
@@ -19,11 +20,11 @@ INCL_DIRS := $(shell find $(INC_DIRS) -type d) $(SIMT_DIR)/include ${DRAGON_DIR}
 
 #INC_DIRS  := ./include
 INC_FLAGS := $(addprefix -I,$(INCL_DIRS))
-LDFLAGS := -ldragon -lgomp 
-CPPFLAGS ?= $(INC_FLAGS) -Wall -pthread -MMD -MP -shared -fPIC -std=c++11 -O3 -mavx -ftree-vectorize -fopt-info-vec
+LDFLAGS := -L/mnt/nvme0/bafs_dragon/library/lib64/ -ldragon -lgomp 
+CPPFLAGS ?= $(INC_FLAGS) -Wall -pthread -MMD -MP -shared -fPIC -std=c++11 -O3 -mavx -ftree-vectorize -fopt-info-vec -fopenmp
 #CUDAFLAGS = $(INC_FLAGS) -std=c++11 -O3 -DCUDA -DNOT_IMPL -arch=sm_35 -gencode=arch=compute_35,code=sm_35 -gencode=arch=compute_35,code=compute_35 #-gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75
 #CUDAFLAGS = $(INC_FLAGS) -std=c++11 -O3 -g -G -DCUDA -DNOT_IMPL -lineinfo -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70 # -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75
-CUDAFLAGS = $(INC_FLAGS) -g -lineinfo --expt-relaxed-constexpr -std=c++11 -O3 -DCUDA -DNOT_IMPL -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70 -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75
+CUDAFLAGS = $(INC_FLAGS) -g -lineinfo --expt-relaxed-constexpr -std=c++11 -O3 -DCUDA -DNOT_IMPL -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70 -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75 -Xcompiler -fopenmp
 #CUDAFLAGS = $(INC_FLAGS) --expt-relaxed-constexpr -std=c++11 -O3 -DCUDA -DNOT_IMPL -arch=sm_70 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70 -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75
 
 

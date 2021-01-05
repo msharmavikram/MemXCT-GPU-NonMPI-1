@@ -32,8 +32,8 @@ extern double abtime;
 extern int numproj;
 extern int numback;
 
-extern int proj_rownztot;
-extern int *proj_rowdispl;
+extern long proj_rownztot;
+extern long *proj_rowdispl;
 extern int *proj_rowindex;
 extern float *proj_rowvalue;
 extern int proj_blocksize;
@@ -49,8 +49,7 @@ extern int *proj_buffmap;
 extern short *proj_buffindex;
 extern float *proj_buffvalue;
 
-extern int back_rownztot;
-extern int *back_rowdispl;
+extern long *back_rowdispl;
 extern int *back_rowindex;
 extern float *back_rowvalue;
 extern int back_blocksize;
@@ -103,7 +102,7 @@ extern int numray;
 __global__ void kernel_SpMV_buffered(float *y, float *x, short *index, float *value, int numrow, int *blockdispl, int *buffdispl, int *buffmap, int buffsize){
   extern __shared__ float shared[];
   float reduce = 0;
-  int ind;
+  long ind;
   
 
   for(int buff = blockdispl[blockIdx.x]; buff < blockdispl[blockIdx.x+1]; buff++){
@@ -111,7 +110,7 @@ __global__ void kernel_SpMV_buffered(float *y, float *x, short *index, float *va
       shared[i] = x[buffmap[buff*buffsize+i]];
     __syncthreads();
     for(int n = buffdispl[buff]; n < buffdispl[buff+1]; n++){
-      ind = n*blockDim.x+threadIdx.x;
+      ind = n*(long)blockDim.x+threadIdx.x;
       reduce = reduce + shared[index[ind]]*value[ind];
     }
     __syncthreads();
@@ -158,9 +157,9 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
   projmem = projmem + sizeof(int)/1e9*(proj_numblocks+1);
   projmem = projmem + sizeof(int)/1e9*(proj_blocknztot+1);
   projmem = projmem + sizeof(int)/1e9*(proj_blocknztot*proj_buffsize);
-  projmem = projmem + sizeof(int)/1e9*(proj_buffnztot*proj_blocksize);
-  projmem = projmem + sizeof(float)/1e9*(proj_buffnztot*proj_blocksize);
-  //printf("PROC %d FORWARD PROJECTION MEMORY: %f GB\n",myid,projmem);
+  projmem = projmem + sizeof(int)/1e9*(proj_buffnztot*(long)proj_blocksize);
+  projmem = projmem + sizeof(float)/1e9*(proj_buffnztot*(long)proj_blocksize);
+  printf("FORWARD PROJECTION MEMORY: %f GB\n",projmem);
 
   cudaMalloc((void**)&proj_blockdispl_d,sizeof(int)*(proj_numblocks+1));
   cudaMalloc((void**)&proj_buffdispl_d,sizeof(int)*(proj_blocknztot+1));
@@ -175,12 +174,15 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
   cudaMemcpy(back_blockdispl_d,back_blockdispl,sizeof(int)*(back_numblocks+1),cudaMemcpyHostToDevice);
   cudaMemcpy(back_buffdispl_d,back_buffdispl,sizeof(int)*(back_blocknztot+1),cudaMemcpyHostToDevice);
   cudaMemcpy(back_buffmap_d,back_buffmap,sizeof(int)*back_blocknztot*back_buffsize,cudaMemcpyHostToDevice);
+  printf("test1\n");
+
 
   std::ifstream fppidx,fppval,fpbidx,fpbval;
-  uint64_t pidx_size = sizeof(short)*proj_buffnztot*proj_blocksize; 
-  uint64_t pval_size = sizeof(float)*proj_buffnztot*proj_blocksize; 
-  uint64_t bidx_size = sizeof(short)*back_buffnztot*back_blocksize; 
-  uint64_t bval_size = sizeof(float)*back_buffnztot*back_blocksize; 
+  uint64_t pidx_size = sizeof(short)*proj_buffnztot*(long)proj_blocksize; 
+  uint64_t pval_size = sizeof(float)*proj_buffnztot*(long)proj_blocksize; 
+  uint64_t bidx_size = sizeof(short)*back_buffnztot*(long)back_blocksize; 
+  uint64_t bval_size = sizeof(float)*back_buffnztot*(long)back_blocksize; 
+  printf("test2\n");
 
   switch(mem){
     case GPUMEM: 
@@ -201,8 +203,8 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
 
         cudaMallocManaged((void**)&back_buffindex_d,bidx_size);
         cudaMallocManaged((void**)&back_buffvalue_d,bval_size);
-        cudaMemAdvise((void**)&back_buffindex_d,bidx_size, cudaMemAdviseSetReadMostly, 0);
-        cudaMemAdvise((void**)&back_buffvalue_d,bval_size, cudaMemAdviseSetReadMostly, 0);
+        cudaMemAdvise(back_buffindex_d,bidx_size, cudaMemAdviseSetReadMostly, 0);
+        cudaMemAdvise(back_buffvalue_d,bval_size, cudaMemAdviseSetReadMostly, 0);
 
         fppidx.open(pidxfile, std::ios::in | std::ios::binary);
         fppval.open(pvalfile, std::ios::in | std::ios::binary);
@@ -222,18 +224,24 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
         fpbval.read((char*)back_buffvalue_d, bval_size);
         break; 
     case UVM_DIRECT:  
-        // printf("\n\n\n\n\nENTERING UVM DIRECT\n\n\n\n\n\n");
+        printf("\n\n\n\n\nENTERING UVM DIRECT\n\n\n\n\n\n");
+	printf("pidx_size %llu\n",pidx_size);
+	printf("pval_size %llu\n",pval_size);
         cudaMallocManaged((void**)&proj_buffindex_d, pidx_size);
         cudaMallocManaged((void**)&proj_buffvalue_d, pval_size);
         cudaMemAdvise(proj_buffindex_d,pidx_size , cudaMemAdviseSetAccessedBy, 0);
         cudaMemAdvise(proj_buffvalue_d,pval_size , cudaMemAdviseSetAccessedBy, 0);
+
+	printf("test 2.1\n");
 
         cudaMallocManaged((void**)&back_buffindex_d,bidx_size);
         cudaMallocManaged((void**)&back_buffvalue_d,bval_size);
         cudaMemAdvise(back_buffindex_d, bidx_size, cudaMemAdviseSetAccessedBy, 0);
         cudaMemAdvise(back_buffvalue_d, bval_size, cudaMemAdviseSetAccessedBy, 0);
 
-        fppidx.open(pidxfile, std::ios::in | std::ios::binary);
+	printf("test 2.2\n");
+
+        /*fppidx.open(pidxfile, std::ios::in | std::ios::binary);
         fppval.open(pvalfile, std::ios::in | std::ios::binary);
         fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
         fpbval.open(bvalfile, std::ios::in | std::ios::binary);
@@ -241,14 +249,21 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
             fprintf(stderr, "File opening failed\n");
             exit(1);
         }
-        // memcpy(proj_buffindex_d,proj_buffindex,sizeof(short)*proj_buffnztot*proj_blocksize);
-        // memcpy(proj_buffvalue_d,proj_buffvalue,sizeof(float)*proj_buffnztot*proj_blocksize);
-        // memcpy(back_buffindex_d,back_buffindex,sizeof(short)*back_buffnztot*back_blocksize);
-        // memcpy(back_buffvalue_d,back_buffvalue,sizeof(float)*back_buffnztot*back_blocksize);
         fppidx.read((char*)proj_buffindex_d, pidx_size);
         fppval.read((char*)proj_buffvalue_d, pval_size);
         fpbidx.read((char*)back_buffindex_d, bidx_size);
-        fpbval.read((char*)back_buffvalue_d, bval_size);
+        fpbval.read((char*)back_buffvalue_d, bval_size);*/
+
+	printf("computed pind %llu\n",sizeof(short)*proj_buffnztot*(long)proj_blocksize);
+	printf("computed pval %llu\n",sizeof(float)*proj_buffnztot*(long)proj_blocksize);
+        memcpy(proj_buffindex_d,proj_buffindex,sizeof(short)*proj_buffnztot*(long)proj_blocksize);
+	printf("test 2.21\n");
+        memcpy(proj_buffvalue_d,proj_buffvalue,sizeof(float)*proj_buffnztot*(long)proj_blocksize);
+        memcpy(back_buffindex_d,back_buffindex,sizeof(short)*back_buffnztot*(long)back_blocksize);
+        memcpy(back_buffvalue_d,back_buffvalue,sizeof(float)*back_buffnztot*(long)back_blocksize);
+
+	printf("test 2.3\n");
+
         break;
     case DRAGON_MAP: 
         // printf("\n\n\n\n\nENTERING DRAGON\n\n\n\n\n\n");
@@ -272,6 +287,7 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
 
 
   }
+  printf("test3\n");
 
   if(mem == UVM_DIRECT || mem == UVM_READONLY){
       fppidx.close();
@@ -315,9 +331,9 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
   backmem = backmem + sizeof(int)/1e9*(back_numblocks+1);
   backmem = backmem + sizeof(int)/1e9*(back_blocknztot+1);
   backmem = backmem + sizeof(int)/1e9*(back_blocknztot*back_buffsize);
-  backmem = backmem + sizeof(int)/1e9*(back_buffnztot*back_blocksize);
-  backmem = backmem + sizeof(float)/1e9*(back_buffnztot*back_blocksize);
-  //printf("PROC %d BACKPROJECTION MEMORY: %f GB\n",myid,backmem);
+  backmem = backmem + sizeof(int)/1e9*(back_buffnztot*(long)back_blocksize);
+  backmem = backmem + sizeof(float)/1e9*(back_buffnztot*(long)back_blocksize);
+  printf("BACKPROJECTION MEMORY: %f GB\n",backmem);
 
   printf("TOTAL GPU MEMORY: %f GB\n",projmem+backmem);
 

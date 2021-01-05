@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#export PATH=$PATH:/usr/local/cuda/bin
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+
 #DOMAIN INFORMATION
 export NUMTHE=1500
 export NUMRHO=1024
@@ -7,11 +10,11 @@ export PIXSIZE=1
 #SOLVER DATA
 export NUMITER=25
 #TILE SIZE (MUST BE POWER OF TWO)
-export SPATSIZE=128
-export SPECSIZE=128
+export SPATSIZE=512
+export SPECSIZE=512
 #BLOCK SIZE
-export PROJBLOCK=256
-export BACKBLOCK=256
+export PROJBLOCK=512
+export BACKBLOCK=512
 #BUFFER SIZE
 export PROJBUFF=48 #KB
 export BACKBUFF=48 #KB
@@ -20,13 +23,17 @@ export THEFILE=./datasets/ADS3_theta.bin
 export SINFILE=./datasets/ADS3_sinogram.bin
 export OUTFILE=./datasets/recon_ADS3.bin
 
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=40
 
 export PINDEX=/mnt/nvme0/memxctdata/ADS3/pidxfile.bin
 export PVALUE=/mnt/nvme0/memxctdata/ADS3/pvalfile.bin
 export BINDEX=/mnt/nvme0/memxctdata/ADS3/bidxfile.bin
 export BVALUE=/mnt/nvme0/memxctdata/ADS3/bvalfile.bin
 
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/nvme0/bafs_dragon/library/lib64
 
 #nvprof --analysis-metrics -f -o analysis.nvvp build/exe/src/main.cu.exe
-build/exe/src/main.cu.exe 5
+
+make clean
+make -j
+cuda-memcheck build/exe/src/main.cu.exe 1

@@ -73,8 +73,8 @@ int *rayrayind;
 
 int *rayrecvlist;
 
-int proj_rownztot;
-int *proj_rowdispl;
+long proj_rownztot;
+long *proj_rowdispl;
 int *proj_rowindex;
 float *proj_rowvalue;
 int proj_blocksize;
@@ -90,7 +90,7 @@ int *proj_buffmap;
 short *proj_buffindex;
 float *proj_buffvalue;
 
-int *back_rowdispl;
+long *back_rowdispl;
 int *back_rowindex;
 float *back_rowvalue;
 int back_blocksize;
@@ -426,19 +426,19 @@ int main(int argc, char** argv){
     int rownzmax = 0;
     for(int k = 0; k < numray; k++)
       if(rownz[k]>rownzmax)rownzmax=rownz[k];
-    int *rowdispl = new int[numray+1];
+    long *rowdispl = new long[numray+1];
     rowdispl[0] = 0;
     for(int k = 1; k < numray+1; k++)
       rowdispl[k] = rowdispl[k-1]+rownz[k-1];
     delete[] rownz;
-    int rownztot = rowdispl[numray];
-    printf("CSR STORAGE: %d (%f GB) rownzmax %d\n",rownztot,rownztot*sizeof(float)*2/1024.0/1024.0/1024.0,rownzmax);
+    long rownztot = rowdispl[numray];
+    printf("CSR STORAGE: %ld (%f GB) rownzmax %d\n",rownztot,rownztot*sizeof(float)*2/1024.0/1024.0/1024.0,rownzmax);
     int *rowindex = new int[rownztot];
     #pragma omp parallel for schedule(dynamic,proj_blocksize)
     for(int k = 0; k < numray; k++){
       float rho = raycoor[k].real();
       float theta = raycoor[k].imag();
-      int start = rowdispl[k];
+      long start = rowdispl[k];
       for(int tile = 0; tile < numspattile; tile++){
         float domain[4];
         domain[0]=spatll[tile].real();
@@ -467,13 +467,13 @@ int main(int argc, char** argv){
     int *intra = new int[proj_rownztot];
     #pragma omp parallel for
     for(int k = 0; k < numray; k++)
-      for(int n = proj_rowdispl[k]; n < proj_rowdispl[k+1]; n++)
+      for(long n = proj_rowdispl[k]; n < proj_rowdispl[k+1]; n++)
         csrRowInd[n] = k;
     #pragma omp parallel for
     for(int n = 0; n < (numthreads+1)*numpix; n++)
       inter[n] = 0;
     #pragma omp parallel for
-    for(int n = 0; n < proj_rownztot; n++){
+    for(long n = 0; n < proj_rownztot; n++){
       intra[n] = inter[(omp_get_thread_num()+1)*numpix+proj_rowindex[n]];
       inter[(omp_get_thread_num()+1)*numpix+proj_rowindex[n]]++;
     }
@@ -481,7 +481,7 @@ int main(int argc, char** argv){
     for(int m = 0; m < numpix; m++)
       for(int t = 1; t < numthreads+1; t++)
         inter[t*numpix+m] = inter[t*numpix+m]+inter[(t-1)*numpix+m];
-    int *rowdispl = new int[numpix+1];
+    long *rowdispl = new long[numpix+1];
     rowdispl[0] = 0;
     for(int m = 1; m < numpix+1; m++)
       rowdispl[m] = rowdispl[m-1] + inter[numthreads*numpix+m-1];
@@ -490,8 +490,8 @@ int main(int argc, char** argv){
       int rownz = rowdispl[k+1]-rowdispl[k];
       if(rownz>rownzmax)rownzmax=rownz;
     }
-    int rownztot = rowdispl[numpix];
-    printf("CSR STORAGE: %d (%f GB) rownzmax %d\n",rownztot,rownztot*sizeof(float)*2/1024.0/1024.0/1024.0,rownzmax);
+    long rownztot = rowdispl[numpix];
+    printf("CSR STORAGE: %ld (%f GB) rownzmax %d\n",rownztot,rownztot*sizeof(float)*2/1024.0/1024.0/1024.0,rownzmax);
     int *rowindex = new int[rownztot];
     #pragma omp parallel for
     for(int n = 0; n < rownztot; n++){
@@ -510,7 +510,7 @@ int main(int argc, char** argv){
   printf("\nBLOCKING PROJECTION MATRIX\n");
   {
     int *rowindex = proj_rowindex;
-    int *rowdispl = proj_rowdispl;
+    long *rowdispl = proj_rowdispl;
     int blocksize = proj_blocksize;
     int buffsize = proj_buffsize;
     int numblocks = numray/blocksize;
@@ -525,7 +525,7 @@ int main(int argc, char** argv){
         for(int n = 0; n < numpix; n++)
           numint[n] = 0;
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numray; m++)
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             numint[rowindex[n]]++;
         int count = 0;
         for(int n = 0; n < numpix; n++)
@@ -564,7 +564,7 @@ int main(int argc, char** argv){
         for(int n = 0; n < numpix; n++)
           numint[n] = 0;
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numray; m++)
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             numint[rowindex[n]]++;
         int count = 0;
         for(int n = 0; n < numpix; n++)
@@ -580,7 +580,7 @@ int main(int argc, char** argv){
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numray; m++){
           for(int n = 0; n < blocknzmax; n++)
             buffnztemp[n] = 0;
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             buffnztemp[numint[rowindex[n]]]++;
           for(int buff = blockdispl[block]; buff < blockdispl[block+1]; buff++){
             int buffloc = buff-blockdispl[block];
@@ -600,21 +600,21 @@ int main(int argc, char** argv){
     delete[] buffnz;
     int buffnztot = buffdispl[blocknztot];
     printf("ELLPACK STORAGE: %ld (%f GB) buffnzmax: %d STORAGE EFFICIENCY: %f DATA REUSE: %f\n",buffnztot*(long)blocksize,buffnztot*(float)blocksize*sizeof(float)*1.5/1024.0/1024.0/1024.0,buffnzmax,proj_rownztot/(float)buffnztot/blocksize*1.5,proj_rownztot/(float)footprint);
-    short *buffindex = new short[buffnztot*blocksize];
+    short *buffindex = new short[buffnztot*(long)blocksize];
     #pragma omp parallel
     {
       int *numint = new int[numpix];
       int *numind = new int[numpix];
       int buffnztemp[blocknzmax];
       #pragma omp for
-      for(int n = 0; n < buffnztot*blocksize; n++)
+      for(int n = 0; n < buffnztot*(long)blocksize; n++)
         buffindex[n] = -1;
       #pragma omp for schedule(dynamic)
       for(int block = 0; block < numblocks; block++){
         for(int n = 0; n < numpix; n++)
           numint[n] = 0;
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numray; m++)
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             numint[rowindex[n]]++;
         int count = 0;
         for(int n = 0; n < numpix; n++)
@@ -627,10 +627,10 @@ int main(int argc, char** argv){
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numray; m++){
           for(int n = 0; n < blocknzmax; n++)
             buffnztemp[n] = 0;
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++){
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++){
             int buffloc = numint[rowindex[n]];
             int row = buffdispl[blockdispl[block]+buffloc]+buffnztemp[buffloc];
-            buffindex[row*blocksize+m%blocksize] = numind[rowindex[n]];
+            buffindex[row*(long)blocksize+m%blocksize] = numind[rowindex[n]];
             buffnztemp[buffloc]++;
           }
         }
@@ -652,7 +652,7 @@ int main(int argc, char** argv){
   printf("BLOCKING BACKPROJECTION MATRIX\n");
   {
     int *rowindex = back_rowindex;
-    int *rowdispl = back_rowdispl;
+    long *rowdispl = back_rowdispl;
     int blocksize = back_blocksize;
     int buffsize = back_buffsize;
     int numblocks = numpix/blocksize;
@@ -667,7 +667,7 @@ int main(int argc, char** argv){
         for(int n = 0; n < numray; n++)
           numint[n] = 0;
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numpix; m++)
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             numint[rowindex[n]]++;
         int count = 0;
         for(int n = 0; n < numray; n++)
@@ -706,7 +706,7 @@ int main(int argc, char** argv){
         for(int n = 0; n < numray; n++)
           numint[n] = 0;
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numpix; m++)
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             numint[rowindex[n]]++;
         int count = 0;
         for(int n = 0; n < numray; n++)
@@ -722,7 +722,7 @@ int main(int argc, char** argv){
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numpix; m++){
           for(int n = 0; n < blocknzmax; n++)
             buffnztemp[n] = 0;
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             buffnztemp[numint[rowindex[n]]]++;
           for(int buff = blockdispl[block]; buff < blockdispl[block+1]; buff++){
             int buffloc = buff-blockdispl[block];
@@ -741,22 +741,22 @@ int main(int argc, char** argv){
       if(buffnzmax < buffnz[buff])buffnzmax = buffnz[buff];
     delete[] buffnz;
     int buffnztot = buffdispl[blocknztot];
-    printf("ELLPACK STORAGE: %d (%f GB) buffnzmax: %d STORAGE EFFICIENCY: %f DATA REUSE: %f\n",buffnztot*blocksize,buffnztot*(float)blocksize*sizeof(float)*1.5/1024.0/1024.0/1024.0,buffnzmax,proj_rownztot/(float)buffnztot/blocksize*1.5,proj_rownztot/(float)footprint);
-    short *buffindex = new short[buffnztot*blocksize];
+    printf("ELLPACK STORAGE: %ld (%f GB) buffnzmax: %d STORAGE EFFICIENCY: %f DATA REUSE: %f\n",buffnztot*(long)blocksize,buffnztot*(float)blocksize*sizeof(float)*1.5/1024.0/1024.0/1024.0,buffnzmax,proj_rownztot/(float)buffnztot/blocksize*1.5,proj_rownztot/(float)footprint);
+    short *buffindex = new short[buffnztot*(long)blocksize];
     #pragma omp parallel
     {
       int *numint = new int[numray];
       int *numind = new int[numray];
       int buffnztemp[blocknzmax];
       #pragma omp for
-      for(int n = 0; n < buffnztot*blocksize; n++)
+      for(long n = 0; n < buffnztot*(long)blocksize; n++)
         buffindex[n] = -1;
       #pragma omp for schedule(dynamic)
       for(int block = 0; block < numblocks; block++){
         for(int n = 0; n < numray; n++)
           numint[n] = 0;
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numpix; m++)
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++)
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++)
             numint[rowindex[n]]++;
         int count = 0;
         for(int n = 0; n < numray; n++)
@@ -769,10 +769,10 @@ int main(int argc, char** argv){
         for(int m = block*blocksize; m < (block+1)*blocksize && m < numpix; m++){
           for(int n = 0; n < blocknzmax; n++)
             buffnztemp[n] = 0;
-          for(int n = rowdispl[m]; n < rowdispl[m+1]; n++){
+          for(long n = rowdispl[m]; n < rowdispl[m+1]; n++){
             int buffloc = numint[rowindex[n]];
             int row = buffdispl[blockdispl[block]+buffloc]+buffnztemp[buffloc];
-            buffindex[row*blocksize+m%blocksize] = numind[rowindex[n]];
+            buffindex[row*(long)blocksize+m%blocksize] = numind[rowindex[n]];
             buffnztemp[buffloc]++;
           }
         }
@@ -793,9 +793,9 @@ int main(int argc, char** argv){
   project_time = omp_get_wtime();
   printf("\nFILL PROJECTION MATRIX\n");
   {
-    proj_buffvalue = new float[proj_buffnztot*proj_blocksize];
+    proj_buffvalue = new float[proj_buffnztot*(long)proj_blocksize];
     #pragma omp parallel for
-    for(int n = 0; n < proj_buffnztot*proj_blocksize; n++)
+    for(long n = 0; n < proj_buffnztot*(long)proj_blocksize; n++)
       proj_buffvalue[n] = 0;
     #pragma omp parallel for schedule(dynamic)
     for(int block = 0; block < proj_numblocks; block++)
@@ -804,7 +804,7 @@ int main(int argc, char** argv){
         float theta = raycoor[k].imag();
         for(int buff = proj_blockdispl[block]; buff < proj_blockdispl[block+1]; buff++)
           for(int row = proj_buffdispl[buff]; row < proj_buffdispl[buff+1]; row++){
-            int ind = row*proj_blocksize+k%proj_blocksize;
+            long ind = row*(long)proj_blocksize+k%proj_blocksize;
             if(proj_buffindex[ind]==-1)
               proj_buffindex[ind] = 0;
             else{
@@ -820,7 +820,7 @@ int main(int argc, char** argv){
           }
       }
     #pragma omp parallel for
-    for(int n = 0; n < proj_buffnztot*proj_blocksize; n++)
+    for(long n = 0; n < proj_buffnztot*(long)proj_blocksize; n++)
       if(proj_buffindex[n]==-1){
         proj_buffindex[n] = 0;
         proj_buffvalue[n] = 0;
@@ -829,9 +829,9 @@ int main(int argc, char** argv){
   printf("TIME: %e\n",omp_get_wtime()-project_time);
   printf("FILL BACKPROJECTION MATRIX\n");
   {
-    back_buffvalue = new float[back_buffnztot*back_blocksize];
+    back_buffvalue = new float[back_buffnztot*(long)back_blocksize];
     #pragma omp parallel for
-    for(int n = 0; n < back_buffnztot*back_blocksize; n++)
+    for(long n = 0; n < back_buffnztot*(long)back_blocksize; n++)
       back_buffvalue[n] = 0;
     #pragma omp parallel for schedule(dynamic)
     for(int block = 0; block < back_numblocks; block++)
@@ -843,7 +843,7 @@ int main(int argc, char** argv){
         domain[3]=domain[2]+pixsize;
         for(int buff = back_blockdispl[block]; buff < back_blockdispl[block+1]; buff++)
           for(int row = back_buffdispl[buff]; row < back_buffdispl[buff+1]; row++){
-            int ind = row*back_blocksize+n%back_blocksize;
+            long ind = row*(long)back_blocksize+n%back_blocksize;
             if(back_buffindex[ind]==-1)
               back_buffindex[ind] = 0;
             else{
@@ -856,7 +856,7 @@ int main(int argc, char** argv){
           }
       }
     #pragma omp parallel for
-    for(int n = 0; n < back_buffnztot*back_blocksize; n++)
+    for(long n = 0; n < back_buffnztot*(long)back_blocksize; n++)
       if(back_buffindex[n]==-1){
         back_buffindex[n] = 0;
         back_buffvalue[n] = 0;
@@ -873,6 +873,8 @@ int main(int argc, char** argv){
   float *dir;
 
   setup_gpu(&obj,&gra,&dir,&mes,&res,&ray);
+
+  return 0;
 
   numproj = 0;
   numback = 0;
@@ -897,7 +899,7 @@ int main(int argc, char** argv){
   #pragma omp parallel for
   for(int n = 0; n < numpix; n++)
     obj[n] = 0;
-  {
+  /*{
     double time;
     double ctime = 0;
     double wtime = 0;
@@ -969,7 +971,7 @@ int main(int argc, char** argv){
     printf("proj: %e s (%f GFLOPS) backproj: %e s (%f GFLOPS) GFLOPS: %f\n",fktime,projflops,bktime,backflops,totflops);
     printf("proj: %f GB/s back: %f GB/s %f GB/s\n",projbw,backbw,totbw);
 
-  }
+  }*/
   float *objtemp = new float[numpix];
   #pragma omp parallel for
   for(int n = 0; n < numpix; n++)
