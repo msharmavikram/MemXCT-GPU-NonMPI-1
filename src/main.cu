@@ -109,6 +109,27 @@ float *back_buffvalue;
 int numproj;
 int numback;
 
+void SpMV_buffered(float *y, float *x, short *index, float *value, int numrow, int *blockdispl, int *buffdispl, int *buffmap, int buffsize, int numblock, int blocksize){
+  #pragma omp parallel for
+  for(int block = 0; block < numblock; block++){
+    float shared[buffsize];
+    float reduce[blocksize] = {0};
+    for(int buff = blockdispl[block]; buff < blockdispl[block+1]; buff++){
+      for(int i = 0; i < buffsize; i++)
+        shared[i] = x[buffmap[buff*buffsize+i]];
+      for(int m = buffdispl[buff]; m < buffdispl[buff+1]; m++)
+        for(int n = 0; n < blocksize; n++)
+          reduce[n] += shared[index[m*(long)blocksize+n]]*value[m*(long)blocksize+n];
+    }
+    for(int m = 0; m < blocksize; m++){
+      int yind = block*blocksize+m;
+      if(yind < numrow)
+        y[yind] = reduce[m];
+    }
+  }
+}
+
+
 int main(int argc, char** argv){
 
   double timetot = omp_get_wtime();
@@ -494,7 +515,7 @@ int main(int argc, char** argv){
     printf("CSR STORAGE: %ld (%f GB) rownzmax %d\n",rownztot,rownztot*sizeof(float)*2/1024.0/1024.0/1024.0,rownzmax);
     int *rowindex = new int[rownztot];
     #pragma omp parallel for
-    for(int n = 0; n < rownztot; n++){
+    for(long n = 0; n < rownztot; n++){
       rowindex[rowdispl[proj_rowindex[n]]+
       inter[omp_get_thread_num()*numpix+
       proj_rowindex[n]]+intra[n]] = csrRowInd[n];
@@ -607,7 +628,7 @@ int main(int argc, char** argv){
       int *numind = new int[numpix];
       int buffnztemp[blocknzmax];
       #pragma omp for
-      for(int n = 0; n < buffnztot*(long)blocksize; n++)
+      for(long n = 0; n < buffnztot*(long)blocksize; n++)
         buffindex[n] = -1;
       #pragma omp for schedule(dynamic)
       for(int block = 0; block < numblocks; block++){
@@ -871,10 +892,20 @@ int main(int argc, char** argv){
   float *res;
   float *gra;
   float *dir;
+  obj = new float[sizeof(float)*numpix];
+  mes = new float[sizeof(float)*numray];
+  ray = new float[sizeof(float)*numray];
+  res = new float[sizeof(float)*numray];
+  gra = new float[sizeof(float)*numpix];
+  dir = new float[sizeof(float)*numpix];
+  /*cudaMallocHost((void**)&obj,sizeof(float)*numpix);
+  cudaMallocHost((void**)&mes,sizeof(float)*numray);
+  cudaMallocHost((void**)&ray,sizeof(float)*numray);
+  cudaMallocHost((void**)&res,sizeof(float)*numray);
+  cudaMallocHost((void**)&gra,sizeof(float)*numpix);
+  cudaMallocHost((void**)&dir,sizeof(float)*numpix);*/
 
-  setup_gpu(&obj,&gra,&dir,&mes,&res,&ray);
-
-  return 0;
+  //setup_gpu();
 
   numproj = 0;
   numback = 0;
@@ -885,9 +916,10 @@ int main(int argc, char** argv){
   fread(mesdata,sizeof(float),numrho*numthe,dataf);
   fclose(dataf);
   #pragma omp parallel for
-  for(int k = 0; k < numray; k++)
+  for(int k = 0; k < numray; k++){
     if(raymesind[k]>-1)mes[k] = mesdata[raymesind[k]];
     else mes[k] = 0;
+  }
   delete[] mesdata;
   printf("INPUT ENDS\n");
   delete[] rayglobalind;
@@ -899,24 +931,25 @@ int main(int argc, char** argv){
   #pragma omp parallel for
   for(int n = 0; n < numpix; n++)
     obj[n] = 0;
-  /*{
+  {
     double time;
     double ctime = 0;
     double wtime = 0;
     double rtime = omp_get_wtime();
     //FORWARD PROJECTION
-    projection(ray,obj);
+    //projection(ray,obj);
+    SpMV_buffered(ray,obj,proj_buffindex,proj_buffvalue,numray,proj_blockdispl,proj_buffdispl,proj_buffmap,proj_buffsize,proj_numblocks,proj_blocksize);
     //FIND RESIDUAL ERROR
     time = omp_get_wtime();
     subtract_kernel(res,ray,mes,numray);
     ctime = ctime + omp_get_wtime() - time;
     //FIND GRADIENT
     backprojection(gra,res);
+    SpMV_buffered(gra,res,back_buffindex,back_buffvalue,numpix,back_blockdispl,back_buffdispl,back_buffmap,back_buffsize,back_numblocks,back_blocksize);
     time = omp_get_wtime();
     float error = norm_kernel(res,numray);
     float gradnorm = norm_kernel(gra,numpix);
     printf("iter: %d error: %e gradnorm: %e\n",0,error,gradnorm);
-    
     fflush(stdout);
     //SAVE DIRECTION
     copy_kernel(dir,gra,numpix);
@@ -925,7 +958,8 @@ int main(int argc, char** argv){
     //START ITERATIONS
     for(int iter = 1; iter <= numiter; iter++){
       //PROJECT DIRECTION
-      projection(ray,dir);
+      //projection(ray,dir);
+      SpMV_buffered(ray,dir,proj_buffindex,proj_buffvalue,numray,proj_blockdispl,proj_buffdispl,proj_buffmap,proj_buffsize,proj_numblocks,proj_blocksize);
       //FIND STEP SIZE
       time = omp_get_wtime();
       float temp1 = dot_kernel(res,ray,numray);
@@ -935,13 +969,15 @@ int main(int argc, char** argv){
       saxpy_kernel(obj,obj,-1.0*alpha,dir,numpix);
       ctime = ctime + omp_get_wtime() - time;
       //FORWARD PROJECTION
-      projection(ray,obj);
+      //projection(ray,obj);
+      SpMV_buffered(ray,obj,proj_buffindex,proj_buffvalue,numray,proj_blockdispl,proj_buffdispl,proj_buffmap,proj_buffsize,proj_numblocks,proj_blocksize);
       //FIND RESIDUAL ERROR
       time = omp_get_wtime();
       subtract_kernel(res,ray,mes,numray);
       ctime = ctime + omp_get_wtime() - time;
       //FIND GRADIENT
-      backprojection(gra,res);
+      //backprojection(gra,res);
+      SpMV_buffered(gra,res,back_buffindex,back_buffvalue,numpix,back_blockdispl,back_buffdispl,back_buffmap,back_buffsize,back_numblocks,back_blocksize);
       time = omp_get_wtime();
       float error = norm_kernel(res,numray);
       float gradnorm = norm_kernel(gra,numpix);
@@ -971,7 +1007,7 @@ int main(int argc, char** argv){
     printf("proj: %e s (%f GFLOPS) backproj: %e s (%f GFLOPS) GFLOPS: %f\n",fktime,projflops,bktime,backflops,totflops);
     printf("proj: %f GB/s back: %f GB/s %f GB/s\n",projbw,backbw,totbw);
 
-  }*/
+  }
   float *objtemp = new float[numpix];
   #pragma omp parallel for
   for(int n = 0; n < numpix; n++)

@@ -4,8 +4,8 @@
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
 
 #DOMAIN INFORMATION
-export NUMTHE=1500
-export NUMRHO=1024
+export NUMTHE=720
+export NUMRHO=512
 export PIXSIZE=1
 #SOLVER DATA
 export NUMITER=25
@@ -19,9 +19,9 @@ export BACKBLOCK=512
 export PROJBUFF=48 #KB
 export BACKBUFF=48 #KB
 #I/O FILES
-export THEFILE=./datasets/ADS3_theta.bin
-export SINFILE=./datasets/ADS3_sinogram.bin
-export OUTFILE=./datasets/recon_ADS3.bin
+export THEFILE=./datasets/ADS2_theta.bin
+export SINFILE=./datasets/ADS2_sinogram.bin
+export OUTFILE=./datasets/recon_ADS2.bin
 
 export OMP_NUM_THREADS=40
 

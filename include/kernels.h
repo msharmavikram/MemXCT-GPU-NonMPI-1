@@ -103,8 +103,6 @@ __global__ void kernel_SpMV_buffered(float *y, float *x, short *index, float *va
   extern __shared__ float shared[];
   float reduce = 0;
   long ind;
-  
-
   for(int buff = blockdispl[blockIdx.x]; buff < blockdispl[blockIdx.x+1]; buff++){
     for(int i = threadIdx.x; i < buffsize; i += blockDim.x)
       shared[i] = x[buffmap[buff*buffsize+i]];
@@ -115,13 +113,13 @@ __global__ void kernel_SpMV_buffered(float *y, float *x, short *index, float *va
     }
     __syncthreads();
   }
-  ind = blockIdx.x*blockDim.x+threadIdx.x;
+  ind = blockIdx.x*(long)blockDim.x+threadIdx.x;
   if(ind < numrow)
     y[ind] = reduce;
 }
  
 
-void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,float **ray){
+void setup_gpu(){
 
   int device = 0;
   printf("device: %d\n",device);
@@ -139,19 +137,12 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
     printf("Maximum global memory size: %lu\n",deviceProp.totalGlobalMem);
     printf("Maximum constant memory size: %zu\n",deviceProp.totalConstMem);
     printf("Maximum shared memory size per block: %zu\n",deviceProp.sharedMemPerBlock);
-    printf("Maximum block dimensions: %dx%dx%d\n",deviceProp.maxThreadsDim[0],deviceProp.maxThreadsDim[1],deviceProp.maxThreadsDim[2]);
-    printf("Maximum grid dimensions: %dx%dx%d\n",deviceProp.maxGridSize[0],deviceProp.maxGridSize[1],deviceProp.maxGridSize[2]);
-    printf("Maximum threads per block: %d\n",deviceProp.maxThreadsPerBlock);
-    printf("Warp size: %d\n",deviceProp.warpSize);
+    printf("Maximum block dimensions: %zux%zux%zu\n",deviceProp.maxThreadsDim[0],deviceProp.maxThreadsDim[1],deviceProp.maxThreadsDim[2]);
+    printf("Maximum grid dimensions: %zux%zux%zu\n",deviceProp.maxGridSize[0],deviceProp.maxGridSize[1],deviceProp.maxGridSize[2]);
+    printf("Maximum threads per block: %zu\n",deviceProp.maxThreadsPerBlock);
+    printf("Warp size: %ld\n",deviceProp.warpSize);
     printf("\n");
   //}
-
-  cudaMallocHost((void**)obj,sizeof(float)*numpix);
-  cudaMallocHost((void**)gra,sizeof(float)*numpix);
-  cudaMallocHost((void**)dir,sizeof(float)*numpix);
-  cudaMallocHost((void**)mes,sizeof(float)*numray);
-  cudaMallocHost((void**)res,sizeof(float)*numray);
-  cudaMallocHost((void**)ray,sizeof(float)*numray);
 
   float projmem = 0;
   projmem = projmem + sizeof(int)/1e9*(proj_numblocks+1);
@@ -176,13 +167,15 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
   cudaMemcpy(back_buffmap_d,back_buffmap,sizeof(int)*back_blocknztot*back_buffsize,cudaMemcpyHostToDevice);
   printf("test1\n");
 
-
   std::ifstream fppidx,fppval,fpbidx,fpbval;
   uint64_t pidx_size = sizeof(short)*proj_buffnztot*(long)proj_blocksize; 
   uint64_t pval_size = sizeof(float)*proj_buffnztot*(long)proj_blocksize; 
   uint64_t bidx_size = sizeof(short)*back_buffnztot*(long)back_blocksize; 
-  uint64_t bval_size = sizeof(float)*back_buffnztot*(long)back_blocksize; 
-  printf("test2\n");
+  uint64_t bval_size = sizeof(float)*back_buffnztot*(long)back_blocksize;
+  printf("pidx_size %ld\n",pidx_size);
+  printf("pval_size %ld\n",pval_size);
+  printf("bidx_size %ld\n",bidx_size);
+  printf("bval_size %ld\n",bval_size);
 
   switch(mem){
     case GPUMEM: 
@@ -241,18 +234,18 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
 
 	printf("test 2.2\n");
 
-        /*fppidx.open(pidxfile, std::ios::in | std::ios::binary);
-        fppval.open(pvalfile, std::ios::in | std::ios::binary);
-        fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
-        fpbval.open(bvalfile, std::ios::in | std::ios::binary);
-        if(!fppidx.is_open() || !fppval.is_open() || !fpbidx.is_open() || !fpbval.is_open()){
-            fprintf(stderr, "File opening failed\n");
-            exit(1);
-        }
-        fppidx.read((char*)proj_buffindex_d, pidx_size);
-        fppval.read((char*)proj_buffvalue_d, pval_size);
-        fpbidx.read((char*)back_buffindex_d, bidx_size);
-        fpbval.read((char*)back_buffvalue_d, bval_size);*/
+        //fppidx.open(pidxfile, std::ios::in | std::ios::binary);
+        //fppval.open(pvalfile, std::ios::in | std::ios::binary);
+        //fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
+        //fpbval.open(bvalfile, std::ios::in | std::ios::binary);
+        //if(!fppidx.is_open() || !fppval.is_open() || !fpbidx.is_open() || !fpbval.is_open()){
+        //    fprintf(stderr, "File opening failed\n");
+        //    exit(1);
+        //}
+        //fppidx.read((char*)proj_buffindex_d, pidx_size);
+        //fppval.read((char*)proj_buffvalue_d, pval_size);
+        //fpbidx.read((char*)back_buffindex_d, bidx_size);
+        //fpbval.read((char*)back_buffvalue_d, bval_size);
 
 	printf("computed pind %llu\n",sizeof(short)*proj_buffnztot*(long)proj_blocksize);
 	printf("computed pval %llu\n",sizeof(float)*proj_buffnztot*(long)proj_blocksize);
@@ -285,7 +278,7 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
         }
         break; 
 
-
+    
   }
   printf("test3\n");
 
@@ -294,37 +287,32 @@ void setup_gpu(float **obj,float **gra, float **dir,float **mes,float **res,floa
       fppval.close();
       fpbidx.close();
       fpbval.close();
-   }
-  
-  /*  
-  FILE *fppidx = fopen((const char*)pidxfile, "wb");
+  }
+ 
+  /*FILE *fppidx = fopen((const char*)pidxfile, "wb");
   FILE *fppval = fopen((const char*)pvalfile, "wb");
 
   if(fppidx == NULL) {printf("Error open file projbufffile\n");}
   if(fppval == NULL) {printf("Error open file projbufffile\n");}
 
-  printf("Size of pindex: %llu elements need %llu\n", proj_buffnztot*proj_blocksize, sizeof(short)*proj_buffnztot*proj_blocksize);
-  printf("Size of pval: %llu elements need %llu\n", proj_buffnztot*proj_blocksize, sizeof(float)*proj_buffnztot*proj_blocksize);
+  printf("Size of pindex: %llu elements need %llu\n", proj_buffnztot*(long)proj_blocksize, sizeof(short)*proj_buffnztot*(long)proj_blocksize);
+  printf("Size of pval: %llu elements need %llu\n", proj_buffnztot*(long)proj_blocksize, sizeof(float)*proj_buffnztot*(long)proj_blocksize);
 
-  fwrite((void*)proj_buffindex_d,sizeof(short),proj_buffnztot*proj_blocksize,fppidx);
-  fwrite((void*)proj_buffvalue_d,sizeof(float),proj_buffnztot*proj_blocksize,fppval);
-*/
+  fwrite((void*)proj_buffindex_d,sizeof(short),proj_buffnztot*(long)proj_blocksize,fppidx);
+  fwrite((void*)proj_buffvalue_d,sizeof(float),proj_buffnztot*(long)proj_blocksize,fppval);
   
  
-/*
   FILE *fpbidx = fopen((const char*)bidxfile, "wb");
   FILE *fpbval = fopen((const char*)bvalfile, "wb");
 
   if(fpbidx == NULL) {printf("Error open file projbufffile\n");}
   if(fpbval == NULL) {printf("Error open file projbufffile\n");}
 
-  printf("Size of bindex: %llu elements need %f MB\n", back_buffnztot*back_blocksize, sizeof(short)*back_buffnztot*back_blocksize/(1024*1024.0));
-  printf("Size of bval: %llu elements need %llu\n", back_buffnztot*back_blocksize, sizeof(float)*back_buffnztot*back_blocksize/(1024.0*1024));
+  printf("Size of bindex: %llu elements need %llu\n", back_buffnztot*(long)back_blocksize, sizeof(short)*back_buffnztot*(long)back_blocksize);
+  printf("Size of bval: %llu elements need %llu\n", back_buffnztot*(long)back_blocksize, sizeof(float)*back_buffnztot*(long)back_blocksize);
 
-  fwrite((void*)back_buffindex_d,sizeof(short),back_buffnztot*back_blocksize,fpbidx);
-  fwrite((void*)back_buffvalue_d,sizeof(float),back_buffnztot*back_blocksize,fpbval);
-
-*/
+  fwrite((void*)back_buffindex_d,sizeof(short),back_buffnztot*(long)back_blocksize,fpbidx);
+  fwrite((void*)back_buffvalue_d,sizeof(float),back_buffnztot*(long)back_blocksize,fpbval);*/
 
 
   float backmem = 0;
