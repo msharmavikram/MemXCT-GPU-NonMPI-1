@@ -4,8 +4,8 @@
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
 
 #DOMAIN INFORMATION
-export NUMTHE=720
-export NUMRHO=512
+export NUMTHE=2400
+export NUMRHO=2048
 export PIXSIZE=1
 #SOLVER DATA
 export NUMITER=25
@@ -19,9 +19,9 @@ export BACKBLOCK=512
 export PROJBUFF=48 #KB
 export BACKBUFF=48 #KB
 #I/O FILES
-export THEFILE=./datasets/ADS2_theta.bin
-export SINFILE=./datasets/ADS2_sinogram.bin
-export OUTFILE=./datasets/recon_ADS2.bin
+export THEFILE=./datasets/ADS4_theta.bin
+export SINFILE=./datasets/ADS4_sinogram.bin
+export OUTFILE=./datasets/recon_ADS4.bin
 
 export OMP_NUM_THREADS=40
 
@@ -36,4 +36,4 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/nvme0/bafs_dragon/library/lib64
 
 make clean
 make -j
-cuda-memcheck build/exe/src/main.cu.exe 1
+build/exe/src/main.cu.exe 2

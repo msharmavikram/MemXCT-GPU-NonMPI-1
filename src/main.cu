@@ -892,20 +892,20 @@ int main(int argc, char** argv){
   float *res;
   float *gra;
   float *dir;
-  obj = new float[sizeof(float)*numpix];
+  /*obj = new float[sizeof(float)*numpix];
   mes = new float[sizeof(float)*numray];
   ray = new float[sizeof(float)*numray];
   res = new float[sizeof(float)*numray];
   gra = new float[sizeof(float)*numpix];
-  dir = new float[sizeof(float)*numpix];
-  /*cudaMallocHost((void**)&obj,sizeof(float)*numpix);
-  cudaMallocHost((void**)&mes,sizeof(float)*numray);
-  cudaMallocHost((void**)&ray,sizeof(float)*numray);
-  cudaMallocHost((void**)&res,sizeof(float)*numray);
-  cudaMallocHost((void**)&gra,sizeof(float)*numpix);
-  cudaMallocHost((void**)&dir,sizeof(float)*numpix);*/
+  dir = new float[sizeof(float)*numpix];*/
+  cuda_err_chk(cudaMallocHost((void**)&obj,sizeof(float)*numpix));
+  cuda_err_chk(cudaMallocHost((void**)&mes,sizeof(float)*numray));
+  cuda_err_chk(cudaMallocHost((void**)&ray,sizeof(float)*numray));
+  cuda_err_chk(cudaMallocHost((void**)&res,sizeof(float)*numray));
+  cuda_err_chk(cudaMallocHost((void**)&gra,sizeof(float)*numpix));
+  cuda_err_chk(cudaMallocHost((void**)&dir,sizeof(float)*numpix));
 
-  //setup_gpu();
+  setup_gpu();
 
   numproj = 0;
   numback = 0;
@@ -937,15 +937,13 @@ int main(int argc, char** argv){
     double wtime = 0;
     double rtime = omp_get_wtime();
     //FORWARD PROJECTION
-    //projection(ray,obj);
-    SpMV_buffered(ray,obj,proj_buffindex,proj_buffvalue,numray,proj_blockdispl,proj_buffdispl,proj_buffmap,proj_buffsize,proj_numblocks,proj_blocksize);
+    projection(ray,obj);
     //FIND RESIDUAL ERROR
     time = omp_get_wtime();
     subtract_kernel(res,ray,mes,numray);
     ctime = ctime + omp_get_wtime() - time;
     //FIND GRADIENT
     backprojection(gra,res);
-    SpMV_buffered(gra,res,back_buffindex,back_buffvalue,numpix,back_blockdispl,back_buffdispl,back_buffmap,back_buffsize,back_numblocks,back_blocksize);
     time = omp_get_wtime();
     float error = norm_kernel(res,numray);
     float gradnorm = norm_kernel(gra,numpix);
@@ -958,8 +956,7 @@ int main(int argc, char** argv){
     //START ITERATIONS
     for(int iter = 1; iter <= numiter; iter++){
       //PROJECT DIRECTION
-      //projection(ray,dir);
-      SpMV_buffered(ray,dir,proj_buffindex,proj_buffvalue,numray,proj_blockdispl,proj_buffdispl,proj_buffmap,proj_buffsize,proj_numblocks,proj_blocksize);
+      projection(ray,dir);
       //FIND STEP SIZE
       time = omp_get_wtime();
       float temp1 = dot_kernel(res,ray,numray);
@@ -969,15 +966,13 @@ int main(int argc, char** argv){
       saxpy_kernel(obj,obj,-1.0*alpha,dir,numpix);
       ctime = ctime + omp_get_wtime() - time;
       //FORWARD PROJECTION
-      //projection(ray,obj);
-      SpMV_buffered(ray,obj,proj_buffindex,proj_buffvalue,numray,proj_blockdispl,proj_buffdispl,proj_buffmap,proj_buffsize,proj_numblocks,proj_blocksize);
+      projection(ray,obj);
       //FIND RESIDUAL ERROR
       time = omp_get_wtime();
       subtract_kernel(res,ray,mes,numray);
       ctime = ctime + omp_get_wtime() - time;
       //FIND GRADIENT
-      //backprojection(gra,res);
-      SpMV_buffered(gra,res,back_buffindex,back_buffvalue,numpix,back_blockdispl,back_buffdispl,back_buffmap,back_buffsize,back_numblocks,back_blocksize);
+      backprojection(gra,res);
       time = omp_get_wtime();
       float error = norm_kernel(res,numray);
       float gradnorm = norm_kernel(gra,numpix);
