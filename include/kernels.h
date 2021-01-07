@@ -195,13 +195,13 @@ void setup_gpu(){
         cudaMalloc((void**)&back_buffindex_d,bidx_size);
         cudaMalloc((void**)&back_buffvalue_d,bval_size);
         cudaMemcpy(proj_buffindex_d,proj_buffindex,pidx_size,cudaMemcpyHostToDevice);
-	delete[] proj_buffindex;
+        delete[] proj_buffindex;
         cudaMemcpy(proj_buffvalue_d,proj_buffvalue,pval_size,cudaMemcpyHostToDevice);
-	delete[] proj_buffvalue;
+        delete[] proj_buffvalue;
         cudaMemcpy(back_buffindex_d,back_buffindex,bidx_size,cudaMemcpyHostToDevice);
-	delete[] back_buffindex;
+        delete[] back_buffindex;
         cudaMemcpy(back_buffvalue_d,back_buffvalue,bval_size,cudaMemcpyHostToDevice);
-	delete[] back_buffvalue;
+        delete[] back_buffvalue;
         break; 
     case UVM_READONLY:
         cudaMallocManaged((void**)&proj_buffindex_d, pidx_size);
@@ -213,33 +213,35 @@ void setup_gpu(){
         cudaMallocManaged((void**)&back_buffvalue_d,bval_size);
         cudaMemAdvise(back_buffindex_d,bidx_size,cudaMemAdviseSetReadMostly,0);
         cudaMemAdvise(back_buffvalue_d,bval_size,cudaMemAdviseSetReadMostly,0);
+	      delete[] proj_buffindex;
+	      delete[] proj_buffvalue;
+	      delete[] back_buffindex;
+	      delete[] back_buffvalue;
 
-        //fppidx.open(pidxfile, std::ios::in | std::ios::binary);
-        //fppval.open(pvalfile, std::ios::in | std::ios::binary);
-        //fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
-        //fpbval.open(bvalfile, std::ios::in | std::ios::binary);
-        //if(!fppidx.is_open() || !fppval.is_open() || !fpbidx.is_open() || !fpbval.is_open()){
-        //    fprintf(stderr, "File opening failed\n");
-        //    exit(1);
-        //}
-         memcpy(proj_buffindex_d,proj_buffindex,sizeof(short)*proj_buffnztot*(long)proj_blocksize);
-	 delete[] proj_buffindex;
-         memcpy(proj_buffvalue_d,proj_buffvalue,sizeof(float)*proj_buffnztot*(long)proj_blocksize);
-	 delete[] proj_buffvalue;
-         memcpy(back_buffindex_d,back_buffindex,sizeof(short)*back_buffnztot*(long)back_blocksize);
-	 delete[] back_buffindex;
-         memcpy(back_buffvalue_d,back_buffvalue,sizeof(float)*back_buffnztot*(long)back_blocksize);
-	 delete[] back_buffvalue;
-        //fppidx.read((char*)proj_buffindex_d, pidx_size);
-        //fppval.read((char*)proj_buffvalue_d, pval_size);
-        //fpbidx.read((char*)back_buffindex_d, bidx_size);
-        //fpbval.read((char*)back_buffvalue_d, bval_size);
+        fppidx.open(pidxfile, std::ios::in | std::ios::binary);
+        fppval.open(pvalfile, std::ios::in | std::ios::binary);
+        fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
+        fpbval.open(bvalfile, std::ios::in | std::ios::binary);
+        if(!fppidx.is_open() || !fppval.is_open() || !fpbidx.is_open() || !fpbval.is_open()){
+           fprintf(stderr, "File opening failed\n");
+           exit(1);
+        }
+        // memcpy(proj_buffindex_d,proj_buffindex,sizeof(short)*proj_buffnztot*(long)proj_blocksize);
+        // delete[] proj_buffindex;
+        // memcpy(proj_buffvalue_d,proj_buffvalue,sizeof(float)*proj_buffnztot*(long)proj_blocksize);
+        // delete[] proj_buffvalue;
+        // memcpy(back_buffindex_d,back_buffindex,sizeof(short)*back_buffnztot*(long)back_blocksize);
+	      // delete[] back_buffindex;
+        // memcpy(back_buffvalue_d,back_buffvalue,sizeof(float)*back_buffnztot*(long)back_blocksize);
+	      // delete[] back_buffvalue;
+        fppidx.read((char*)proj_buffindex_d, pidx_size);
+        fppval.read((char*)proj_buffvalue_d, pval_size);
+        fpbidx.read((char*)back_buffindex_d, bidx_size);
+        fpbval.read((char*)back_buffvalue_d, bval_size);
         break; 
     case UVM_DIRECT:  
         printf("\n\n\n\n\nENTERING UVM DIRECT\n\n\n\n\n\n");
-	printf("pidx_size %llu\n",pidx_size);
-	printf("pval_size %llu\n",pval_size);
-        cudaMallocManaged((void**)&proj_buffindex_d,pidx_size);
+	      cudaMallocManaged((void**)&proj_buffindex_d,pidx_size);
         cudaMallocManaged((void**)&proj_buffvalue_d,pval_size);
         cudaMemAdvise(proj_buffindex_d,pidx_size,cudaMemAdviseSetAccessedBy,0);
         cudaMemAdvise(proj_buffvalue_d,pval_size,cudaMemAdviseSetAccessedBy,0);
@@ -248,31 +250,32 @@ void setup_gpu(){
         cudaMallocManaged((void**)&back_buffvalue_d,bval_size);
         cudaMemAdvise(back_buffindex_d,bidx_size,cudaMemAdviseSetAccessedBy,0);
         cudaMemAdvise(back_buffvalue_d,bval_size,cudaMemAdviseSetAccessedBy,0);
+	       
+	      delete[] proj_buffindex;
+	      delete[] proj_buffvalue;
+	      delete[] back_buffindex;
+	      delete[] back_buffvalue;
+        fppidx.open(pidxfile, std::ios::in | std::ios::binary);
+        fppval.open(pvalfile, std::ios::in | std::ios::binary);
+        fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
+        fpbval.open(bvalfile, std::ios::in | std::ios::binary);
+        if(!fppidx.is_open() || !fppval.is_open() || !fpbidx.is_open() || !fpbval.is_open()){
+           fprintf(stderr, "File opening failed\n");
+           exit(1);
+        }
+        fppidx.read((char*)proj_buffindex_d, pidx_size);
+        fppval.read((char*)proj_buffvalue_d, pval_size);
+        fpbidx.read((char*)back_buffindex_d, bidx_size);
+        fpbval.read((char*)back_buffvalue_d, bval_size);
 
-        //fppidx.open(pidxfile, std::ios::in | std::ios::binary);
-        //fppval.open(pvalfile, std::ios::in | std::ios::binary);
-        //fpbidx.open(bidxfile, std::ios::in | std::ios::binary);
-        //fpbval.open(bvalfile, std::ios::in | std::ios::binary);
-        //if(!fppidx.is_open() || !fppval.is_open() || !fpbidx.is_open() || !fpbval.is_open()){
-        //    fprintf(stderr, "File opening failed\n");
-        //    exit(1);
-        //}
-        //fppidx.read((char*)proj_buffindex_d, pidx_size);
-        //fppval.read((char*)proj_buffvalue_d, pval_size);
-        //fpbidx.read((char*)back_buffindex_d, bidx_size);
-        //fpbval.read((char*)back_buffvalue_d, bval_size);
-
-	printf("computed pind %llu\n",sizeof(short)*proj_buffnztot*(long)proj_blocksize);
-	printf("computed pval %llu\n",sizeof(float)*proj_buffnztot*(long)proj_blocksize);
-        memcpy(proj_buffindex_d,proj_buffindex,sizeof(short)*proj_buffnztot*(long)proj_blocksize);
-	delete[] proj_buffindex;
-        memcpy(proj_buffvalue_d,proj_buffvalue,sizeof(float)*proj_buffnztot*(long)proj_blocksize);
-	delete[] proj_buffvalue;
-        memcpy(back_buffindex_d,back_buffindex,sizeof(short)*back_buffnztot*(long)back_blocksize);
-	delete[] back_buffindex;
-        memcpy(back_buffvalue_d,back_buffvalue,sizeof(float)*back_buffnztot*(long)back_blocksize);
-	delete[] back_buffvalue;
-
+	      // memcpy(proj_buffindex_d,proj_buffindex,sizeof(short)*proj_buffnztot*(long)proj_blocksize);
+	      // delete[] proj_buffindex;
+        // memcpy(proj_buffvalue_d,proj_buffvalue,sizeof(float)*proj_buffnztot*(long)proj_blocksize);
+	      // delete[] proj_buffvalue;
+        // memcpy(back_buffindex_d,back_buffindex,sizeof(short)*back_buffnztot*(long)back_blocksize);
+	      // delete[] back_buffindex;
+        // memcpy(back_buffvalue_d,back_buffvalue,sizeof(float)*back_buffnztot*(long)back_blocksize);
+	      // delete[] back_buffvalue;
         break;
     case DRAGON_MAP: 
         // printf("\n\n\n\n\nENTERING DRAGON\n\n\n\n\n\n");
@@ -297,25 +300,24 @@ void setup_gpu(){
     
   }
 
-  //if(mem == UVM_DIRECT || mem == UVM_READONLY){
-  //    fppidx.close();
-  //    fppval.close();
-  //    fpbidx.close();
-  //    fpbval.close();
-  //}
- 
-  /*FILE *fppidx = fopen((const char*)pidxfile, "wb");
+  if(mem == UVM_DIRECT || mem == UVM_READONLY){
+     fppidx.close();
+     fppval.close();
+     fpbidx.close();
+     fpbval.close();
+  }
+ /*
+  FILE *fppidx = fopen((const char*)pidxfile, "wb");
   FILE *fppval = fopen((const char*)pvalfile, "wb");
 
   if(fppidx == NULL) {printf("Error open file projbufffile\n");}
   if(fppval == NULL) {printf("Error open file projbufffile\n");}
 
-  printf("Size of pindex: %llu elements need %llu\n", proj_buffnztot*(long)proj_blocksize, sizeof(short)*proj_buffnztot*(long)proj_blocksize);
-  printf("Size of pval: %llu elements need %llu\n", proj_buffnztot*(long)proj_blocksize, sizeof(float)*proj_buffnztot*(long)proj_blocksize);
-
-  fwrite((void*)proj_buffindex_d,sizeof(short),proj_buffnztot*(long)proj_blocksize,fppidx);
-  fwrite((void*)proj_buffvalue_d,sizeof(float),proj_buffnztot*(long)proj_blocksize,fppval);
+  size_t written_projind = fwrite((void*)proj_buffindex_d,sizeof(short),proj_buffnztot*(long)proj_blocksize,fppidx);
+  size_t written_projval =fwrite((void*)proj_buffvalue_d,sizeof(float),proj_buffnztot*(long)proj_blocksize,fppval);
   
+  printf("Size of pindex: %llu elements need %llu  written: %llu\n", proj_buffnztot*(long)proj_blocksize, sizeof(short)*proj_buffnztot*(long)proj_blocksize, written_projind);
+  printf("Size of pval: %llu elements need %llu    written: %llu\n", proj_buffnztot*(long)proj_blocksize, sizeof(float)*proj_buffnztot*(long)proj_blocksize, written_projval);
  
   FILE *fpbidx = fopen((const char*)bidxfile, "wb");
   FILE *fpbval = fopen((const char*)bvalfile, "wb");
@@ -323,11 +325,12 @@ void setup_gpu(){
   if(fpbidx == NULL) {printf("Error open file projbufffile\n");}
   if(fpbval == NULL) {printf("Error open file projbufffile\n");}
 
-  printf("Size of bindex: %llu elements need %llu\n", back_buffnztot*(long)back_blocksize, sizeof(short)*back_buffnztot*(long)back_blocksize);
-  printf("Size of bval: %llu elements need %llu\n", back_buffnztot*(long)back_blocksize, sizeof(float)*back_buffnztot*(long)back_blocksize);
+  size_t written_backind = fwrite((void*)back_buffindex_d,sizeof(short),back_buffnztot*(long)back_blocksize,fpbidx);
+  size_t written_backval = fwrite((void*)back_buffvalue_d,sizeof(float),back_buffnztot*(long)back_blocksize,fpbval);
 
-  fwrite((void*)back_buffindex_d,sizeof(short),back_buffnztot*(long)back_blocksize,fpbidx);
-  fwrite((void*)back_buffvalue_d,sizeof(float),back_buffnztot*(long)back_blocksize,fpbval);*/
+  printf("Size of bindex: %llu elements need %llu written: %llu\n", back_buffnztot*(long)back_blocksize, sizeof(short)*back_buffnztot*(long)back_blocksize, written_backind);
+  printf("Size of bval: %llu elements need %llu   written: %llu\n", back_buffnztot*(long)back_blocksize, sizeof(float)*back_buffnztot*(long)back_blocksize, written_backval);
+  */
  }
 
 void projection(float *mes, float *obj){

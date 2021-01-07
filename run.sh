@@ -25,10 +25,10 @@ export OUTFILE=./datasets/recon_ADS4.bin
 
 export OMP_NUM_THREADS=40
 
-export PINDEX=/mnt/nvme0/memxctdata/ADS3/pidxfile.bin
-export PVALUE=/mnt/nvme0/memxctdata/ADS3/pvalfile.bin
-export BINDEX=/mnt/nvme0/memxctdata/ADS3/bidxfile.bin
-export BVALUE=/mnt/nvme0/memxctdata/ADS3/bvalfile.bin
+export PINDEX=/mnt/nvme2/memxctdata/ADS4/pidxfile.bin
+export PVALUE=/mnt/nvme2/memxctdata/ADS4/pvalfile.bin
+export BINDEX=/mnt/nvme2/memxctdata/ADS4/bidxfile.bin
+export BVALUE=/mnt/nvme2/memxctdata/ADS4/bvalfile.bin
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/nvme0/bafs_dragon/library/lib64
 
