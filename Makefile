@@ -8,7 +8,7 @@ INC_DIRS ?= ./include
 EXE_DIR ?= $(BUILD_DIR)/exec
 SIMT_DIR ?= ./freestanding
 #DRAGON_DIR ?= /home/vsm2/bafs_dragon/
-DRAGON_DIR ?= /mnt/nvme0/bafs_dragon/
+DRAGON_DIR ?= /mnt/nvme2/bafs_dragon/
 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s -or -name *.cu)
 SRCS_NAMES := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s -or -name *.cu -printf "%f\n")
