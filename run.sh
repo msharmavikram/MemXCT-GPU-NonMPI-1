@@ -36,4 +36,4 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/nvme0/bafs_dragon/library/lib64
 
 make clean
 make -j
-build/exe/src/main.cu.exe 2
+build/exe/src/main.cu.exe 5
